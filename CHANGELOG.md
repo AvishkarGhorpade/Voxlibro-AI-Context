@@ -1,5 +1,43 @@
- # VoxLibro — Changelog
+# VoxLibro — Changelog
 > Every change made, in reverse chronological order.
+
+---
+
+## Session 2 — Dynamic Colors (Material You)
+
+### Files Modified
+- `VoxLibroTheme.kt` — Dynamic color support added for Android 12+
+
+**What changed:**
+- `VoxLibroTheme()` now resolves the color scheme at runtime:
+  - API 31+ → `dynamicDarkColorScheme(context).lockBrandColors()`
+  - API < 31 → `VoxLibroDarkColorScheme` (unchanged, same as before)
+- New private `ColorScheme.lockBrandColors()` extension: copies the dynamic scheme and replaces every brand-identity role with our design-system tokens. The static scheme and the locked-dynamic scheme produce identical role assignments — the only thing that varies is which dynamic roles are left free (see below).
+- `rememberSystemUiController()` + `SideEffect` added: both system bars set to `Color.Transparent`, `darkIcons = false`, `isNavigationBarContrastEnforced = false`. This replaces any previous ad-hoc status bar colour logic.
+- `LocalContext.current` + `isSystemInDarkTheme()` imports added; unused `androidx.compose.foundation.isSystemInDarkTheme` not included since the app is always dark.
+
+**What dynamic color is allowed to touch (wallpaper-adaptive):**
+- `surfaceTint` — the subtle tint Material 3 applies to elevated surfaces
+- `outline` / `outlineVariant` — focus rings and dividers inside Material widgets
+- Any role not explicitly overridden in `lockBrandColors()`
+
+**What is locked (brand-identity roles — never change with wallpaper):**
+- `primary` / `onPrimary` / `primaryContainer` / `onPrimaryContainer` → `AccentGreen`
+- `secondary` / `onSecondary` / `secondaryContainer` / `onSecondaryContainer` → card surface tokens
+- `tertiary` / `onTertiary` → `AccentGreenDim`
+- All `error` roles → `DangerRed` family
+- All `background` / `surface` / `surfaceVariant` roles → dark palette tokens
+- `inverseSurface` / `inverseOnSurface` / `inversePrimary` / `scrim`
+
+**Why surfaces are also locked:** All screens use manually-colored composables (`SurfaceCard`, `SurfaceDark` etc.). If dynamic colors changed these M3 roles, wallpaper-tinted Material surfaces would clash with the hardcoded card colors throughout the app.
+
+**No screen files need to change.** All token references (`AccentGreen`, `SurfaceDark`, etc.) remain in `Color.kt` untouched.
+
+### New Dependency Required
+```kotlin
+// build.gradle.kts
+implementation("com.google.accompanist:accompanist-systemuicontroller:0.34.0")
+```
 
 ---
 
@@ -75,7 +113,7 @@
 
 ---
 
-## Bugs Fixed This Session
+## Bugs Fixed Session 1
 
 | Bug | Fix |
 |---|---|
@@ -97,6 +135,7 @@
 // build.gradle.kts
 implementation("com.google.android.play:review:2.0.1")
 implementation("com.google.android.play:review-ktx:2.0.1")
+implementation("com.google.accompanist:accompanist-systemuicontroller:0.34.0")  // Session 2
 ```
 
 ## Resources Added
