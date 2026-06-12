@@ -3,6 +3,60 @@
 
 ---
 
+## Session 3 — Notification Channels (Android 8+ / Play Store Compliance)
+
+### New Files Created
+- `util/NotificationChannelManager.kt`
+
+### Files Modified
+- `MainActivity.kt` — one import added, one call added in `onCreate()`
+- `PROJECT_DECISIONS.md` — decisions D-019 and D-020 added
+
+---
+
+**`NotificationChannelManager.kt`** — `object` (singleton) in `com.avishkar.voxlibro.util`:
+
+Three channels registered via `nm.createNotificationChannels()` in a single batched call:
+
+| Constant | ID | Importance | Sound | Badge | Used for |
+|---|---|---|---|---|---|
+| `CHANNEL_PLAYBACK` | `voxlibro_playback` | LOW | ❌ | ❌ | Ongoing MediaPlayer foreground notification |
+| `CHANNEL_CONVERSION` | `voxlibro_conversion` | DEFAULT | ✅ | ✅ | "Your file is ready" alert when app is backgrounded |
+| `CHANNEL_UPDATES` | `voxlibro_updates` | LOW | ❌ | ❌ | InAppUpdateManager banners |
+
+`createChannels()` is guarded with `Build.VERSION.SDK_INT < Build.VERSION_CODES.O` — complete no-op on API 25 and below. Android deduplicates channel registration by ID on every subsequent launch.
+
+**Why `IMPORTANCE_LOW` for playback:** Posting a sound/vibration notification while audio is playing would interrupt the spoken audio. `IMPORTANCE_DEFAULT` would do exactly that.
+
+**Why `IMPORTANCE_DEFAULT` for conversion:** Conversion runs in the background. The user needs an audible heads-up that their file is ready; a silent notification would go unnoticed.
+
+---
+
+**`MainActivity.kt`** — two changes only:
+
+1. Import added (line 88):
+   ```kotlin
+   import com.avishkar.voxlibro.util.NotificationChannelManager
+   ```
+
+2. First call in `onCreate()`, before `POST_NOTIFICATIONS` permission request and before any manager is instantiated:
+   ```kotlin
+   NotificationChannelManager.createChannels(this)
+   ```
+
+No composables, no state, no other files touched.
+
+---
+
+**Play Store checklist update:**
+- [x] Notification channels (Android 8+) ← **Done this session**
+
+**Follow-up required (not in scope of this session):**
+Any existing `NotificationCompat.Builder` calls in `CustomTtsService` or any foreground service must be updated to pass `NotificationChannelManager.CHANNEL_PLAYBACK` (or the relevant constant) as the channel ID. Without this, notifications on Android 8+ will be silently dropped even though channels are now registered.
+
+---
+
+
 ## Session 2 — Dynamic Colors (Material You)
 
 ### Files Modified

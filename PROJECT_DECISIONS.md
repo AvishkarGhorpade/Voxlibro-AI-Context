@@ -115,3 +115,25 @@
 **Decision:** "Share VoxLibro" in Settings opens a standard Android share sheet with Play Store link.
 **Reason:** Simple, standard, works everywhere. No custom analytics needed at this stage.
 **Message format:** Pre-written text with emoji, app description, and Play Store URL using `context.packageName`.
+
+---
+
+## Notification Decisions
+
+### D-019: Notification Channel Strategy
+**Decision:** Three channels with distinct importance levels: `IMPORTANCE_LOW` for playback and updates, `IMPORTANCE_DEFAULT` for conversion complete.
+**Reason:**
+- Playback channel must be silent — posting a sound/vibration notification while audio is actively playing interrupts the listening experience.
+- Conversion channel uses `IMPORTANCE_DEFAULT` (sound + heads-up) because the user may have left the app; they need a clear alert that their file is ready.
+- Updates channel is informational and should not interrupt the user.
+**Implementation:** `object NotificationChannelManager` in `util/` — singleton, no constructor arguments. Called once in `MainActivity.onCreate()` immediately after `super.onCreate()` and before any notification-posting code. Android deduplicates on repeated launches.
+**Single source of truth for channel IDs:**
+- `NotificationChannelManager.CHANNEL_PLAYBACK`   → `"voxlibro_playback"`
+- `NotificationChannelManager.CHANNEL_CONVERSION` → `"voxlibro_conversion"`
+- `NotificationChannelManager.CHANNEL_UPDATES`    → `"voxlibro_updates"`
+**Implication:** Every `NotificationCompat.Builder` call in the codebase MUST reference one of the three constants above. Never hardcode a channel ID string in any other file.
+
+### D-020: Channel Registration Ordering in onCreate
+**Decision:** `NotificationChannelManager.createChannels(this)` is the FIRST call after `super.onCreate()`, before `installSplashScreen()` is moved, before the `POST_NOTIFICATIONS` permission request, and before any service or manager is instantiated.
+**Reason:** Any code path that runs between `super.onCreate()` and the channel registration call could theoretically post a notification to a non-existent channel. On Android 8+, notifications posted to unregistered channels are silently dropped. Registering first eliminates this race.
+**Exception:** `installSplashScreen()` is called before `super.onCreate()` per Jetpack SplashScreen API requirements — that is a platform constraint, not a violation of this rule.
